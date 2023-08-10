@@ -1,128 +1,196 @@
-//Testbench.sv
-module jFIFOTb;
-  wire [7:0] DATAOUT;
-  wire full, empty;
-  reg clock, reset, wn, rn;
-  reg [7:0] DATAIN;  
+// Code your design here
+`timescale 1ns/1ps
+module fifo(clk,reset,wr_en,rd_en,din,dout,full,empty);
+  input clk,reset;
+  input wr_en,rd_en;
+  input [7:0]din;
+  output [7:0]dout;
+  output full,empty;
   
-  jFIFO jfifo(DATAOUT, full, empty, clock, reset, wn, rn, DATAIN);
+  reg [7:0]mem[0:15];//declaration of RAM
+  wire clk,reset;
+  wire wr_en,rd_en;
+  wire [7:0]din;
+  reg [7:0]dout;
+  wire full,empty;
+  reg [4:0]addr;
+  integer i;
+  assign full = (addr ==5'b10000) ? 1'b1 : 1'b0;
+  assign empty = (addr ==5'b00000) ? 1'b1 : 1'b0;
   
-    
-  //enabling the wave dump
-  initial begin 
-    $dumpfile("dump.vcd"); $dumpvars;
-  end
-
-  initial
-  begin
-    clock = 0; DATAIN = 8'd0;
-    reset = 1; clock = 1; #5 ; clock = 0; #5;
-    reset = 0;
-    
-    $display("Start testing");
-
-    // First write some data into the queue
-    wn = 1; rn = 0;
-    DATAIN = 8'd100;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd150;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd200;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd40;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd70;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd65;
-    clock = 1; #5 ; clock = 0; #5;
-    DATAIN = 8'd15;
-    clock = 1; #5 ; clock = 0; #5;
-    
-    // Now start reading and checking the values
-    wn = 0; rn = 1;
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd100 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd150 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd200 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd40 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd70 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd65 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( DATAOUT === 8'd15 )
-      $display("PASS %p ", DATAOUT);
-    else
-      $display("FAIL %p ", DATAOUT);
-
-    clock = 1; #5 ; clock = 0; #5;
-    if ( empty === 1 )
-      $display("PASS %p ", empty);
-    else
-      $display("FAIL %p ", empty);
-  end
-
+  always@(posedge clk)
+    begin
+      if(reset)
+        begin
+        	addr = 4'b0000;
+      		for(i=0;i<=15;i=i+1) 
+        		mem[i] = 8'b0;
+        end
+      else if(wr_en | rd_en)//read or write
+        begin
+          if(wr_en && (!full))
+            begin
+            	mem[addr]=din;
+            	addr = addr + 1;
+            end
+          else
+            if(rd_en && (!empty))
+              begin
+                dout =mem[0];
+                mem[0] = mem[1];
+                mem[1] = mem[2];
+                mem[2] = mem[3];
+                mem[3] = mem[4];
+                mem[4] = mem[5];
+                mem[5] = mem[6];
+                mem[6] = mem[7];
+                mem[7] = mem[8];
+                mem[8] = mem[9];
+                mem[9] = mem[10];
+                mem[10] = mem[11];
+                mem[11] = mem[12];
+                mem[12] = mem[13];
+                mem[13] = mem[14];
+                mem[14] = mem[15];
+                mem[15] = 8'b0;
+                   addr = addr - 1;         
+                
+              end
+              
+        end
+      
+    end
 endmodule
-//Design.sv
-// This is linear queue / FIFO
-// The queue length 8
-// The data width is also 8 bits
-module jFIFO(DATAOUT, full, empty, clock, reset, wn, rn, DATAIN);
-  output reg [7:0] DATAOUT;
-  output full, empty;
-  input [7:0] DATAIN;
-  input clock, reset, wn, rn; // Need to understand what is wn and rn are for
+
+
+`timescale 1ns/1ps
+module test_fifo;
+  reg clk,reset;
+  reg wr_en,rd_en;
+  reg [7:0]din;
+  wire [7:0]dout;
+  wire full,empty;
   
-  reg [2:0] wptr, rptr; // pointers tracking the stack
-  reg [7:0] memory [7:0]; // the stack is 8 bit wide and 8 locations in size
+  fifo UUT(clk,reset,wr_en,rd_en,din,dout,full,empty);
+
+  initial begin
+    clk =0;
+    $display("clock initialize---------------");
+      
+  end
   
-  assign full = ( (wptr == 3'b111) & (rptr == 3'b000) ? 1 : 0 );
-  assign empty = (wptr == rptr) ? 1 : 0;
+  task rst;
+    begin
+    #10  reset = 1;
+      $display("reset initialize---------------");
+    
+      #20  reset = 0;
+         end
+  endtask
   
-  always @(posedge clock)
-  begin
-    if (reset)
+  always #5 clk = ~clk;
+  
+  task wr_rd_init;
+    begin
+    	wr_en =0;
+      	rd_en =0;
+      	din = 0;
+      $display("write read initialize---------------");
+    
+    end
+  endtask
+  
+  task write;
+    input [7:0]wdata;
+    begin
+       @(posedge clk)
       begin
-        memory[0] <= 0; memory[1] <= 0; memory[2] <= 0; memory[3] <= 0;
-        memory[4] <= 0; memory[5] <= 0; memory[6] <= 0; memory[7] <= 0;
-        DATAOUT <= 0; wptr <= 0; rptr <= 0;
+        wr_en =  1;
+        din =  wdata;
       end
-    else if (wn & !full)
+    end
+  endtask
+  
+  task write16;
+    begin
+      write(8'hff);
+      write(8'hfe);
+      write(8'hfd);
+      write(8'hfc);
+      write(8'hfb);
+      write(8'hfa);
+      write(8'hf9);
+      write(8'hf8);
+      write(8'hf7);
+      write(8'hf6);
+      write(8'hf5);
+      write(8'hf4);
+      write(8'hf3);
+      write(8'hf2);
+      write(8'hf1);
+      write(8'hf0);
+      write(8'h11);
+      
+    end
+  endtask
+  
+  task endwrite;
+    begin
+      wr_en = 0;
+      din =  0;
+    end
+  endtask
+  
+  //read process
+  task read;
+    begin
+      @(posedge clk)
       begin
-        memory[wptr] <= DATAIN;
-        wptr <= wptr + 1;
+        rd_en = 1;
       end
-    else if (rn & !empty)
+    end
+  endtask
+  
+  task read16;
+    begin
+      read;read;read;read;
+      read;read;read;read;
+      read;read;read;read;
+      read;read;read;read;
+      
+    end
+  endtask
+  
+  task endread;
+    begin
+       @(posedge clk)
       begin
-        DATAOUT <= memory[rptr];
-        rptr <= rptr + 1;
+        rd_en = 0;
       end
+    end
+  endtask
+  
+  initial begin
+    $display("start--- initialize---------------");
+    
+    rst;
+    wr_rd_init;
+    write16;
+    endwrite;
+    #2 read16;
+    #10 endread;
+    $display("stopped---------------");
+    
+    #10 $stop;
+        
+  end
+  
+ 
+  initial begin
+    $dumpfile("dump.vcd");
+    $dumpvars(1,test_fifo);
   end
 endmodule
+
+   
+   
